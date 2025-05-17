@@ -26,6 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark"> {/* Apply dark theme by default */}
+      <head />
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthProvider>
           {children}
