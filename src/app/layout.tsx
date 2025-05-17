@@ -27,7 +27,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <head />
+      <head>
+        {/* Next.js will populate this head automatically.
+            This explicit tag helps prevent whitespace issues. */}
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthProvider>
           {children}
