@@ -1,0 +1,108 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions to check user roles and authentication status
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isUser(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Assumes custom claims are set on the user's auth token:
+    // e.g., request.auth.token.role, request.auth.token.barId
+    function hasRole(role) {
+      return isSignedIn() && request.auth.token.role == role;
+    }
+
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    function isOwner(barId) {
+      // BarId in token should match the barId in the path
+      return hasRole('owner') && request.auth.token.barId == barId;
+    }
+    
+    function isOwnerOfThisBar() {
+      // Used for resources where barId is a field in the resource itself.
+      // Example: barId in path: /bars/{barId} -> isOwner(barId)
+      // Example: barId in resource: /someCollection/{docId} where doc has barId field -> isOwner(resource.data.barId)
+      return hasRole('owner') && request.auth.token.barId == resource.data.barId;
+    }
+
+    function isStaff(barId) {
+      return hasRole('staff') && request.auth.token.barId == barId;
+    }
+    
+    function isStaffOfThisBar() {
+       return hasRole('staff') && request.auth.token.barId == resource.data.barId;
+    }
+
+    function isDisplay(barId) {
+      return hasRole('display') && request.auth.token.barId == barId;
+    }
+    
+    function isDisplayForThisBar() {
+       return hasRole('display') && request.auth.token.barId == resource.data.barId;
+    }
+
+    // Rules for the 'users' collection
+    match /users/{userId} {
+      allow read: if isAdmin() || isUser(userId);
+      // User creates their own doc on signup, admin can create too.
+      allow create: if isAdmin() || (isUser(userId) && request.resource.data.uid == userId);
+      // Admin can update anything. User can only update specific, non-critical fields.
+      allow update: if isAdmin() || 
+                      (isUser(userId) && request.resource.data.uid == userId &&
+                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'barId', 'email', 'uid'])); 
+                       // Example: User can update displayName, photoURL but not role or barId.
+      allow delete: if isAdmin();
+    }
+
+    // Rules for 'bars' collection and its subcollections
+    match /bars/{barId} {
+      allow read: if isAdmin() || isOwner(barId) || isStaff(barId) || isDisplay(barId);
+      allow create: if isAdmin(); // Only admins can register new bars
+      allow update: if isAdmin() || isOwner(barId); // Owner can update their bar's details
+      allow delete: if isAdmin();
+
+      // Rules for 'drinks' subcollection within a bar
+      match /drinks/{drinkId} {
+        allow read: if isAdmin() || isOwner(barId) || isStaff(barId) || isDisplay(barId);
+        // Owners can manage their menu. Admins have full access.
+        // currentPrice and other dynamic fields are updated by backend functions.
+        // Owners should only modify fields like name, basePrice, category, description, imageUrl.
+        allow create: if isAdmin() || isOwner(barId);
+        allow update: if isAdmin() || 
+                        (isOwner(barId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['currentPrice', 'previousPrice', 'totalSold', 'lastPriceUpdate']));
+                        // Owner cannot directly change dynamic fields; these are function-controlled.
+        allow delete: if isAdmin() || isOwner(barId);
+      }
+
+      // Rules for 'orders' subcollection within a bar
+      match /orders/{orderId} {
+        allow read: if isAdmin() || isOwner(barId) || isStaff(barId); // Staff can view orders for their bar
+        // Staff or owners can create orders. Admins for administrative purposes.
+        allow create: if isAdmin() || isOwner(barId) || isStaff(barId);
+        // Owners can update order status (e.g., completed, cancelled). Admins too.
+        allow update: if isAdmin() || 
+                        (isOwner(barId) && request.resource.data.keys().hasOnly(['status', 'other_owner_modifiable_fields'])); 
+                        // Example: Only status can be changed by owner.
+        allow delete: if isAdmin(); // Or perhaps only for pending orders by owner.
+      }
+      
+      // Potentially other subcollections like 'staffManagement', 'barSettings' for owner
+      // match /staff/{staffId} { ... }
+      // match /settings/{settingId} { ... }
+    }
+    
+    // Global collections accessible only by admins, for example
+    // match /platformSettings/{settingId} {
+    //   allow read, write: if isAdmin();
+    // }
+  }
+}
