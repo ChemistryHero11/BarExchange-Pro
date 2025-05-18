@@ -9,7 +9,7 @@ import { Header } from '@/components/layout/header';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from '@/components/ui/button';
 import { 
-  LayoutDashboard, BarChart3, Settings, ShieldCheck, Tv, BrainCircuit, LogOut, Users, Building, DollarSign, MenuSquare, ListChecks
+  LayoutDashboard, BarChart3, Settings, ShieldCheck, Tv, BrainCircuit, LogOut, Users, Building, DollarSign, MenuSquare
 } from 'lucide-react';
 
 // Logo component
@@ -52,10 +52,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user) {
-    // This state should ideally be handled by the redirect,
-    // but as a fallback, show a message or a simplified login prompt.
-    // The /login page will handle actual login.
+  if (!user && pathname !== '/login') { 
+    // If not loading, no user, and not on login page, redirect.
+    // This helps if user context is somehow lost while on an authenticated page.
     return (
       <div className="flex h-screen items-center justify-center bg-background text-foreground">
         Redirecting to login...
@@ -63,6 +62,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
   
+  // If the current page is the display page, render it full-screen without layout
+  if (pathname === '/display') {
+    return <>{children}</>;
+  }
+
+  // If no user is loaded yet (and it's not the display page which handles its own auth implicitly)
+  // but we are not in the initial loading phase, this is an odd state, perhaps show a minimal error or redirect.
+  // However, the useEffect above should handle redirection if !user.
+  // This block is primarily to ensure user object is available for role checks below.
+  if (!user) {
+      return (
+        <div className="flex h-screen items-center justify-center bg-background text-foreground">
+          Authenticating... If this persists, please try logging in again.
+        </div>
+      );
+  }
+
   const ownerNavItems = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/dashboard/menu', label: 'Menu Items', icon: MenuSquare },
@@ -78,15 +94,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { href: '/admin/subscriptions', label: 'Subscriptions', icon: DollarSign },
   ];
   
-  const displayNavItems = [
-    { href: '/display', label: 'Live Prices', icon: Tv }, // Point to static /display page
-    // Potentially settings for the display itself
-    // { href: '/display/settings', label: 'Display Settings', icon: Settings }, // Example, if a settings page is created
+  // displayNavItems are not used here anymore if /display bypasses this layout.
+  // Keeping for structural reference or if display users could access other restricted pages.
+  const displaySpecificNavItemsIfAny = [ 
+     { href: '/display', label: 'Live Prices', icon: Tv },
   ];
+
 
   let navItems: { href: string; label: string; icon: React.ElementType }[] = [];
   let appName = "BarExchange Pro";
-  let homePath = "/dashboard"; // Default home path
+  let homePath = "/dashboard"; 
 
   if (user.role === 'owner') {
     navItems = ownerNavItems;
@@ -97,9 +114,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     appName = "Admin Panel";
     homePath = "/admin";
   } else if (user.role === 'display') {
-    navItems = displayNavItems;
-    appName = "Price Display";
-    homePath = "/display";
+    // Display role users are typically just for /display page which bypasses this main layout.
+    // If they could access other (hypothetical) restricted pages, this would apply.
+    navItems = displaySpecificNavItemsIfAny;
+    appName = "Price Display Controls"; // Or similar, if there were settings.
+    homePath = "/display"; // Though they'd be redirected to /display which has no sidebar.
   }
   // Add 'staff' role later if needed
 
@@ -120,7 +139,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {navItems.map((item) => (
               <SidebarMenuItem key={item.href}>
                 <Link href={item.href} legacyBehavior passHref>
-                  <SidebarMenuButton isActive={pathname === item.href || (item.href !== '/dashboard' && item.href !== '/admin' && item.href !== '/display' && pathname.startsWith(item.href))} tooltip={item.label}>
+                  <SidebarMenuButton isActive={pathname === item.href || (item.href !== homePath && pathname.startsWith(item.href))} tooltip={item.label}>
                     <item.icon className="h-5 w-5" />
                     <span className="truncate">{item.label}</span>
                   </SidebarMenuButton>
