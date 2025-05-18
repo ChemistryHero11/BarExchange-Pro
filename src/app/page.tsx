@@ -1,3 +1,4 @@
+
 'use client';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -17,7 +18,7 @@ export default function HomePage() {
         } else if (user.role === 'owner') {
           router.replace('/dashboard');
         } else if (user.role === 'display') {
-          router.replace(`/display/${user.barId || 'default'}`); // Or some display overview
+          router.replace('/display'); // Redirect to the static /display page
         }
         // Add other roles as needed
         else {

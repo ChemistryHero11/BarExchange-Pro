@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -78,24 +79,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   ];
   
   const displayNavItems = [
-    // Assuming display has a barId. If not, this needs adjustment.
-    { href: `/display/${user.barId || 'live'}`, label: 'Live Prices', icon: Tv },
+    { href: '/display', label: 'Live Prices', icon: Tv }, // Point to static /display page
     // Potentially settings for the display itself
-    { href: '/display/settings', label: 'Display Settings', icon: Settings },
+    // { href: '/display/settings', label: 'Display Settings', icon: Settings }, // Example, if a settings page is created
   ];
 
   let navItems: { href: string; label: string; icon: React.ElementType }[] = [];
   let appName = "BarExchange Pro";
+  let homePath = "/dashboard"; // Default home path
 
   if (user.role === 'owner') {
     navItems = ownerNavItems;
     appName = "Owner Dashboard";
+    homePath = "/dashboard";
   } else if (user.role === 'admin') {
     navItems = adminNavItems;
     appName = "Admin Panel";
+    homePath = "/admin";
   } else if (user.role === 'display') {
     navItems = displayNavItems;
     appName = "Price Display";
+    homePath = "/display";
   }
   // Add 'staff' role later if needed
 
@@ -103,7 +107,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader className="p-4 border-b border-sidebar-border">
-          <Link href={user.role === 'admin' ? "/admin" : "/dashboard"} className="flex items-center gap-3">
+          <Link href={homePath} className="flex items-center gap-3">
             <Logo />
             <div className="flex flex-col">
               <h1 className="text-lg font-semibold text-sidebar-foreground">BarExchange</h1>
@@ -116,7 +120,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {navItems.map((item) => (
               <SidebarMenuItem key={item.href}>
                 <Link href={item.href} legacyBehavior passHref>
-                  <SidebarMenuButton isActive={pathname === item.href || (item.href !== '/dashboard' && item.href !== '/admin' && pathname.startsWith(item.href))} tooltip={item.label}>
+                  <SidebarMenuButton isActive={pathname === item.href || (item.href !== '/dashboard' && item.href !== '/admin' && item.href !== '/display' && pathname.startsWith(item.href))} tooltip={item.label}>
                     <item.icon className="h-5 w-5" />
                     <span className="truncate">{item.label}</span>
                   </SidebarMenuButton>

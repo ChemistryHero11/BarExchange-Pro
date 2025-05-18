@@ -1,3 +1,4 @@
+
 'use client';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,8 +30,12 @@ export default function LoginPage() {
       } else if (email === "admin@example.com" && password === "password") {
         setUser({ uid: 'mock-admin-uid', email: 'admin@example.com', displayName: 'Platform Admin', role: 'admin' });
         router.push('/admin');
-      } else {
-        setError("Invalid credentials. Try owner@example.com or admin@example.com with password 'password'.");
+      } else if (email === "display@example.com" && password === "password") {
+        setUser({ uid: 'mock-display-uid', email: 'display@example.com', displayName: 'Bar Display', role: 'display', barId: 'displayBar' });
+        router.push('/display');
+      }
+       else {
+        setError("Invalid credentials. Try owner@example.com, admin@example.com, or display@example.com with password 'password'.");
       }
     } catch (err) {
       setError("Login failed. Please try again.");
