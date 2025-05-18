@@ -1,8 +1,13 @@
 ﻿{
   "functions": { "source": "functions" },
 
-  "hosting": { "source": "." },
+  // ↓ Hosting config for the linked site
+  "hosting": {
+    "site": "barexchange-pro",   // ← ADD THIS LINE
+    "source": "."
+  },
 
+  // ↓ Frameworks plugin (leave as-is)
   "webFrameworks": {
     "nextjs": { "source": "." }
   }
